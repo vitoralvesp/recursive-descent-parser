@@ -55,8 +55,8 @@ int main() {
     expr(&aux);
 
     // A palavra é aceita se chegar ao final \0
-    if (*word == '\0') printf("\nstatus: palavra aceita!!");
-    else printf("\nstatus: palavra não aceita!!");
+    if (*aux == '\0') printf(">> status: palavra aceita!!");
+    else printf(">> status: palavra não aceita!!");
 
     free(word);
 
