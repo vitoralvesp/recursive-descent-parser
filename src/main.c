@@ -27,59 +27,44 @@
 
 // Gramática
 int expr(char **word, char** posfix);
-int expr_(char **word, char** posfix);
+int expr_(char **word, char** posfix, int result);
 int term(char **word, char** posfix);
-int term_(char **word, char** posfix);
+int term_(char **word, char** posfix, int result);
 int factor(char **word, char** posfix);
-
-// Estrutura da Pilha
-struct Stack {
-    int top;
-    int capacity;
-    int *array;
-};
-
-struct Stack *stack;
-
-struct Stack *createStack(int capacity);
-void deleteStack(struct Stack *stack);
-int isFull(struct Stack *stack);
-int isEmpty(struct Stack *stack);
-int push(struct Stack *stack, int x);
-int pop(struct Stack *stack);
-int peek(struct Stack *stack);
 
 int main() {
 
     char *posfix = (char *) malloc(50 * sizeof(char));
     char *word = (char *) malloc(50 * sizeof(char));
-    char *aux = word;
+    char *aux_word = word;
+    char *aux_posfix = posfix;
+    int result = 0;
 
-    stack = createStack(50);
-
-    printf(">> enter a word: ");
+    printf(">> insira uma palavra: ");
     fgets(word, 50, stdin);
 
     // Adiciona \0 na após o último caractere da palavra
-    while (*aux != '\0') {
-        if (*aux == '\n') {
-            *aux = '\0';
+    while (*aux_word != '\0') {
+        if (*aux_word == '\n') {
+            *aux_word = '\0';
             break;
         }
-        aux++;
+        aux_word++;
     }
 
     // Impede erro de referência ao utilizar o free
     // word++ afeta a referencia 
-    aux = word;
-    expr(&aux, &posfix);
+    aux_word = word;
+    result = expr(&aux_word, &aux_posfix);
+
+    *aux_posfix = '\0';
 
     // A palavra é aceita se chegar ao final \0
-    if (*aux == '\0') printf(">> %s => palavra aceita!!", posfix);
-    else printf(">> status: palavra não aceita!!");
+    if (*aux_word == '\0') printf(">> resultado: %s => %s=%d OK", word, posfix, result);
+    else printf(">> resultado: %s => palavra nao aceita por erro sintatico", word);
 
     free(word);
-    // free(posfix);
+    free(posfix);
 
     return 0;
 }
@@ -92,11 +77,11 @@ int factor(char **word, char** posfix) {
     switch(**word) {
         case '(':
             (*word)++;
-            expr(word, posfix);
+            int result = expr(word, posfix);
             if (**word == ')') {
                 (*word)++;
-                break;
-            } else return 1;
+                return result;
+            } else exit(1);
         case '1':
         case '2':
         case '3':
@@ -106,11 +91,10 @@ int factor(char **word, char** posfix) {
         case '7':
         case '8':
         case '9':
-            *(*posfix)++ = **word;
+            char value = **word;      
+            *(*posfix)++ = value;
             (*word)++;
-            break;
-        default:
-            break;
+            return value - '0';
     }
 }
 
@@ -118,41 +102,37 @@ int factor(char **word, char** posfix) {
  * @brief Reconhece os termos da palavra 
  */
 int term(char **word, char** posfix) {
-    factor(word, posfix);
-    term_(word, posfix);
+    int result = factor(word, posfix);
+    return term_(word, posfix, result);
 }
 
 /**
  * @brief Função auxiliar ao 'term' 
  */
-int term_(char **word, char** posfix) {
-    int calc = 0;
+int term_(char **word, char** posfix, int result) {
+    int factor_result;
     char op;
     switch(**word) {
         case '*':
             op = **word;
             (*word)++;
-            factor(word, posfix);
+            factor_result = factor(word, posfix);
             *(*posfix)++ = op;
-            term_(word, posfix);
-            break;
+            return term_(word, posfix, result * factor_result);
         case '/':
             op = **word;
             (*word)++;
-            factor(word, posfix);
+            factor_result = factor(word, posfix);
             *(*posfix)++ = op;
-            term_(word, posfix);
-            break;
+            return term_(word, posfix, result / factor_result);
         case '%':
             op = **word;
             (*word)++;
-            factor(word, posfix);
+            factor_result = factor(word, posfix);
             *(*posfix)++ = op;
-            term_(word, posfix);
-            break;
+            return term_(word, posfix, result % factor_result);
         default:
-            factor(word, posfix);
-            break;
+            return result;
     }
 }
 
@@ -160,91 +140,30 @@ int term_(char **word, char** posfix) {
  * @brief Reconhece as expressões da palavra
  */
 int expr(char **word, char** posfix) {
-    term(word, posfix);
-    expr_(word, posfix);
-    return 0;
+    int result = term(word, posfix);
+    return expr_(word, posfix, result);
 }
 
 /**
  * @brief Função auxiliar à 'expr' 
  */
-int expr_(char **word, char** posfix) {
+int expr_(char **word, char** posfix, int result) {
+    int term_result;
     char op;
     switch(**word) {
         case '+':
             op = **word;
             (*word)++;
-            term(word, posfix);
+            term_result = term(word, posfix);
             *(*posfix)++ = op;
-            expr_(word, posfix);
-            break;
+            return expr_(word, posfix, result + term_result);
         case '-':
             op = **word;
             (*word)++;
-            term(word, posfix);
+            term_result = term(word, posfix);
             *(*posfix)++ = op;
-            expr_(word, posfix);
-            break;
+            return expr_(word, posfix, result - term_result);
         default:
-            term(word, posfix);
-            break;
+            return result;
     }
-}
-
-/**
- *
- */
-struct Stack *createStack(int capacity) {
-    struct Stack *stack = (struct Stack*) malloc (sizeof(struct Stack));
-    stack->capacity = capacity;
-    stack->top = -1;
-    stack->array = (int *) malloc(capacity * sizeof(int));
-    return stack;
-}
-
-/**
- * 
- */
-void deleteStack(struct Stack *stack) {
-    free(stack->array);
-    free(stack);
-}
-
-/**
- * 
- */
-int isFull(struct Stack *stack) {
-    return stack->top >= stack->capacity-1;
-}
-
-/**
- * 
- */
-int isEmpty(struct Stack *stack) {
-    return stack->top < 0;
-}
-
-/**
- * 
- */
-int push(struct Stack *stack, int x) {
-    if (isFull(stack)) return 1;
-    stack->array[++stack->top] = x;
-    return 0;
-}
-
-/**
- * 
- */
-int pop(struct Stack *stack) {
-    if (isEmpty(stack)) return 1;
-    return stack->array[stack->top--];
-}
-
-/**
- * 
- */
-int peek(struct Stack *stack) {
-    if (isEmpty(stack)) return 0;
-    return stack->array[stack->top];
 }
